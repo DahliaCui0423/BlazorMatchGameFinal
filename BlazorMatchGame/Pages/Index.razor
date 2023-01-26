@@ -1,0 +1,332 @@
+﻿@page "/"
+@using System.Timers
+
+<style>
+    .container {
+        width: 400px;
+    }
+
+    button {
+        width: 100px;
+        height: 100px;
+        font-size: 50px;
+    }
+</style>
+
+<div class="container">
+    <div class="row">
+        <h2>Choose Game Level</h2>
+    </div>
+    <div class="row">
+        @for (int buttonNumber = 1; buttonNumber < 4; buttonNumber++)
+        {
+            int level = buttonNumber;
+            <button type="button" class="btn btn-secondary">
+                @buttonNumber
+            </button>
+        }
+    </div>
+    <div class="row">
+        @for (var animalNumber = 0; animalNumber < shuffledAnimals.Count; animalNumber++)
+        {
+            var animal = shuffledAnimals[animalNumber];
+            var uniqueDescription = $"Button #{animalNumber}";
+            var emptyIndex = animalNumber;
+
+
+            <div class="col-3">
+
+                <button @onclick="@(() => ButtonClick(animal, uniqueDescription, emptyIndex))"
+                        type="button" class="btn btn-outline-dark">
+                    @*/*tring to use to animalIconshow to store the showing state, if true, show animal string, else,show empty string, but the button still got information*/*@
+                    <h1>@emptyEmoji[emptyIndex]</h1>
+
+
+
+                </button>
+            </div>
+        }
+    </div>
+    <div class="row">
+        <h2>Matches found: @matchesFound/8</h2>
+    </div>
+    <div class="row">
+        <h2>Mistake(s): @mistakes</h2>
+    </div>
+    <div class="row">
+        <h2>Time: @timeDisplay</h2>
+    </div>
+    <div class="row">
+        <h2>Best Time: @bestTimeToDisplay</h2>
+    </div>
+    <div class="row">
+        @if (playButtonShow)
+        {
+            <button @onclick="@(() => PlayButtonClick())">
+                <h3>Play Again</h3>
+            </button>
+        }
+        else
+        {
+            <button @onclick="@(() => PlayButtonClick())">
+                <h3>Start Game</h3>
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    List<string> animalEmoji = new List<string>()
+{
+        "🐶", "🐶",
+        "🐱", "🐱",
+        "🐰", "🐰",
+        "🐨", "🐨",
+        "🐷", "🐷",
+        "🐻", "🐻",
+        "🦊", "🦊",
+        "🐯", "🐯",
+
+
+    };
+
+    // Add different Level to the game
+
+    @*List<string> levelTwo = new List<string>()
+        {
+            "🐭", "🐭",
+            "🐼", "🐼"
+        };
+
+        List<string> levelThree = new List<string>()
+        {
+            "🐭", "🐭",
+            "🐼", "🐼",
+            "🐸", "🐸",
+            "🐮", "🐮"
+        };*@
+
+    List<string> emptyEmoji = new List<string>()
+    {
+                "","",
+                "","",
+                "","",
+                "","",
+                "","",
+                "","",
+                "","",
+                "","",
+            };
+
+    List<string> shuffledAnimals = new List<string>();
+    int matchesFound = 0;
+    // count mistakes
+    int mistakes = 0;
+    Timer timer;
+    int tenthsOfSecondsElapsed = 0;
+    string timeDisplay;
+    string bestTimeToDisplay;
+    int bestTime = 0;
+    bool playButtonShow = false;
+    bool animalIconShow = false;
+    int playLevelListLength = 16;
+
+    protected override void OnInitialized()
+    {
+        timer = new Timer(100);
+        timer.Elapsed += Timer_Tick;
+
+        // Load Game
+        //SetUpGame();
+    }
+
+    private void SetUpGame()
+    {
+        @*emptyEmoji = new List<string>()
+            {
+            "","",
+            "","",
+            "","",
+            "","",
+            "","",
+            "","",
+            "","",
+            "","",
+            };*@
+        animalIconShow = true;
+        // Reload new animal list
+        Random random = new Random();
+        shuffledAnimals = animalEmoji;
+        @*if (playLevelListLength == 16)
+            {
+                shuffledAnimals = animalEmoji;
+            }
+            else if (playLevelListLength == 20)
+            {
+                for (int i=0; i<4; i++)
+                {
+                    shuffledAnimals.Add(levelTwo[i]);
+                }
+            }
+            else if (playLevelListLength == 24)
+            {
+                for (int i = 0; i < 8; i++)
+                {
+                    shuffledAnimals.Add(levelThree[i]);
+                }
+            }*@
+
+    shuffledAnimals = shuffledAnimals
+        .OrderBy(item => random.Next())
+        .ToList();
+
+
+    // Reset the matches
+    matchesFound = 0;
+
+    // Reset the mistakes
+    mistakes = 0;
+
+    // Reset the timer
+    tenthsOfSecondsElapsed = 0;
+
+    //DRAFT: Try to let the animal icons show 3 secs then disappear
+    //FAIL: It stop the whole game from loading, the game will show up with empty grids.
+    //System.Threading.Thread.Sleep(3000);
+    //animalIconShow = false;
+
+}
+
+string lastAnimalFound = string.Empty;
+string lastDescription = string.Empty;
+int lastNumber = 100;
+
+private void ButtonClick(string animal, string animalDescription, int number)
+{
+
+    if (lastAnimalFound == string.Empty)
+    {
+        // First selection of the pair. Remember it.
+        lastAnimalFound = animal;
+        lastDescription = animalDescription;
+        lastNumber = number;
+
+        emptyEmoji[number] = animal;
+
+        // timer start when click the first button
+        timer.Start();
+
+    }
+    else if ((lastAnimalFound == animal) && (animalDescription != lastDescription))
+    {
+
+        // Match found! Reset for next pair
+        lastAnimalFound = string.Empty;
+
+        // Replace found animals with empty string to hide them
+        shuffledAnimals = shuffledAnimals
+            .Select(a => a.Replace(animal, string.Empty))
+            .ToList();
+
+        emptyEmoji[number] = animal;
+
+        // Add number of matches that have been found
+        matchesFound++;
+
+        // Reload Game if every matches found
+        if (matchesFound == (shuffledAnimals.Count) / 2)
+        {
+
+            if ((bestTime == 0) || (tenthsOfSecondsElapsed <= bestTime))
+            {
+                bestTime = tenthsOfSecondsElapsed;
+                bestTimeToDisplay = (bestTime / 10F).ToString("0.0s");
+            }
+
+
+            // Stop the timer
+            timer.Stop();
+            playButtonShow = true;
+        }
+    }
+    else if ((lastAnimalFound == animal) && (animalDescription == lastDescription))
+    {
+
+
+        // Click on the same button
+        lastAnimalFound = animal;
+        lastDescription = animalDescription;
+        lastNumber = number;
+        emptyEmoji[number] = animal;
+    }
+    else
+    {
+        emptyEmoji[number] = animal;
+        Task.Delay(1000).ContinueWith(e => EmptyIcon(number, lastNumber));
+
+
+        // pair don't match, reset selection.
+
+
+        mistakes++;
+    }
+}
+
+private void EmptyIcon(int number, int lastNumber)
+{
+    emptyEmoji[number] = string.Empty;
+    emptyEmoji[lastNumber] = string.Empty;
+    lastAnimalFound = string.Empty;
+    lastNumber = 100;
+}
+
+private void Timer_Tick(Object source, ElapsedEventArgs e)
+{
+    InvokeAsync(() =>
+    {
+
+        tenthsOfSecondsElapsed++;
+        timeDisplay = (tenthsOfSecondsElapsed / 10F)
+        .ToString("0.0s");
+        StateHasChanged();
+    });
+}
+
+private void PlayButtonClick()
+{
+    SetUpGame();
+    playButtonShow = false;
+    for (int i=0; i<emptyEmoji.Count;i++)
+    {
+        emptyEmoji[i] = string.Empty;
+    }
+}
+
+
+    @*private void LevelButtonClick(int level)
+        {
+            if (level == 1)
+            {
+                playLevelListLength = 16;
+            }
+            else if (level == 2)
+            {
+                playLevelListLength = 20;
+            }
+            else if (level == 3)
+            {
+                playLevelListLength = 24;
+            }
+        }*@
+
+    
+    //1. Add Play Again Button (Done)
+    //2. Fix the bug of clicking same button and count as wrong (Done)
+    //3. Add mistakes counter (Done)
+    //4. Add Best Time Record (Done)
+    //5. Add different levels to this game: easy normal hard
+    //    1) Add choose level button list (done)
+    //    2) Add changing level function
+    //    3) Add new list to hold lists with different level (higher level has more list element)
+    //    4)
+}
